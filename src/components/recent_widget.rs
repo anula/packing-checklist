@@ -19,38 +19,48 @@ pub struct RecentWidgetProps {
     pub elements: Vec<RecentWidgetElement>,
 }
 
-#[function_component(RecentWidget)]
-pub fn recent_widget(RecentWidgetProps { title, elements }: &RecentWidgetProps) -> Html {
+pub struct RecentWidget;
 
-    let html_els = elements.iter().map(|element| {
-        let mut tag_name = "a";
-        let mut classes = "panel-block".to_string();
-        let mut link = "".to_string();
-        if element.el_type == RecentWidgetElementType::Template {
-            tag_name = "div";
-            classes.push_str(" is-justify-content-space-between");
-            link.push_str("href=\"link.html\"");
-        }
+impl Component for RecentWidget {
+    type Message = ();
+    type Properties = RecentWidgetProps;
+
+    fn create(_ctx: &Context<Self>) -> Self {
+        RecentWidget
+    }
+
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let RecentWidgetProps { title, elements } = ctx.props();
+        let html_els = elements.iter().map(|element| {
+            let mut tag_name = "a";
+            let mut class = classes!("panel-block");
+            let mut href = Some("link.html");
+            if element.el_type == RecentWidgetElementType::Template {
+                tag_name = "div";
+                class.push("is-justify-content-space-between");
+                href = None; 
+            }
+            html! {
+                <@{tag_name} {class} {href} >
+                    <div> {element.name.to_string()} </div>
+                    if element.el_type == RecentWidgetElementType::Template {
+                      <div>
+                        <button class="button is-link is-light is-small">
+                            { "Create trip" }
+                        </button>
+                      </div>
+                    }
+                </@>
+            }
+        }).collect::<Html>();
         html! {
-            <@{tag_name} class={classes} {link}>
-                <div> {element.name.to_string()} </div>
-                if element.el_type == RecentWidgetElementType::Template {
-                  <div>
-                    <button class="button is-link is-light is-small">
-                        { "Create trip" }
-                    </button>
-                  </div>
-                }
-            </@>
+          <div class="panel">
+
+            <p class="panel-heading">{title}</p>
+
+            { html_els }
+
+          </div>
         }
-    }).collect::<Html>();
-    html! {
-      <div class="panel">
-
-        <p class="panel-heading">{title}</p>
-
-        { html_els }
-
-      </div>
     }
 }
