@@ -1,8 +1,11 @@
 use yew::prelude::*;
+use yew_router::prelude::*;
+
+use crate::routes::{Route};
 
 #[derive(Clone, PartialEq)]
 pub enum BreadcrumbElement {
-    Link { text: String, link: String },
+    Link { text: String, destination: Route },
     Active { text: String },
 }
 
@@ -15,17 +18,19 @@ pub struct BreadcrumbsProps {
 pub fn breadcrumbs(BreadcrumbsProps { elements }: &BreadcrumbsProps) -> Html {
 
     let links = elements.iter().map(|element| {
-        let (text, link) = match element {
-            BreadcrumbElement::Link{text, link} => (text.to_string(), link.to_string()),
-            BreadcrumbElement::Active{text} => (text.to_string(), "#".to_string()),
+        let el_html = match element {
+            BreadcrumbElement::Link{text, destination} => html!{
+                <Link<Route> to={destination.clone()}> { text } </Link<Route>>
+            },
+            BreadcrumbElement::Active{text} => html! { <a> { text } </a> },
         };
-        let mut class = "";
+        let mut class = classes!();
         if let BreadcrumbElement::Active{ .. } = element {
-            class = "is-active";
+            class.push("is-active");
         }
         html! {
-            <li class={class}>
-                <a href={link}>{ text }</a>
+            <li {class}>
+                { el_html }
             </li>
         }
     }).collect::<Html>();
