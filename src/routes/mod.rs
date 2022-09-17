@@ -1,9 +1,13 @@
 use yew_router::prelude::*;
 use yew::prelude::*;
 
-mod home;
+use crate::types::{TripId};
 
-pub use home::Home;
+mod home;
+mod trips;
+
+use home::Home;
+use trips::Trips;
 
 #[derive(Clone, Routable, PartialEq)]
 pub enum Route {
@@ -11,10 +15,10 @@ pub enum Route {
     Home,
     #[at("/trips")]
     Trips,
-    #[at("/trip/edit/:trip_id")]
-    TripEdit { trip_id: u64 },
-    #[at("/trip/:trip_id")]
-    Trip { trip_id: u64 },
+    #[at("/trip/edit/:id")]
+    TripEdit { id: TripId },
+    #[at("/trip/:id")]
+    Trip { id: TripId },
     #[at("/templates")]
     Templates,
     #[at("/template/edit/:template_id")]
@@ -29,9 +33,9 @@ pub enum Route {
 pub fn switch(route: &Route) -> Html {
     match route {
         Route::Home => html! { <Home/>  },
-        Route::Trips => html! { <h1> {"Trips - unimplemented"} </h1> },
-        Route::Trip { trip_id } => html! { <h1> {format!("Trip view {} - unimplemented", trip_id)} </h1> },
-        Route::TripEdit { trip_id } => html! { <h1> {format!("TripEdit view {} - unimplemented", trip_id)} </h1> },
+        Route::Trips => html! { <Trips/> },
+        Route::Trip { id } => html! { <h1> {format!("Trip view {} - unimplemented", id)} </h1> },
+        Route::TripEdit { id } => html! { <h1> {format!("TripEdit view {} - unimplemented", id)} </h1> },
         Route::Templates => html! { <h1> {"Templates - unimplemented"} </h1> },
         Route::Template { template_id } => html! { <h1> {format!("Template view {} - unimplemented", template_id)} </h1> },
         Route::TemplateEdit { template_id } => html! { <h1> {format!("TemplateEdit view {} - unimplemented", template_id)} </h1> },

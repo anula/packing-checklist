@@ -3,6 +3,7 @@ use yew_router::prelude::*;
 
 mod components;
 mod routes;
+mod types;
 
 use crate::components::*;
 use crate::routes::{Route, switch};
@@ -18,5 +19,6 @@ fn app() -> Html {
 }
 
 fn main() {
+    wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<App>();
 }

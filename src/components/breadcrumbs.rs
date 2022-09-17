@@ -11,13 +11,13 @@ pub enum BreadcrumbElement {
 
 #[derive(Properties, PartialEq)]
 pub struct BreadcrumbsProps {
-    pub elements: Vec<BreadcrumbElement>,
+    pub crumbs: Vec<BreadcrumbElement>,
 }
 
 #[function_component(Breadcrumbs)]
-pub fn breadcrumbs(BreadcrumbsProps { elements }: &BreadcrumbsProps) -> Html {
+pub fn breadcrumbs(BreadcrumbsProps { crumbs }: &BreadcrumbsProps) -> Html {
 
-    let links = elements.iter().map(|element| {
+    let links = crumbs.iter().map(|element| {
         let el_html = match element {
             BreadcrumbElement::Link{text, destination} => html!{
                 <Link<Route> to={destination.clone()}> { text } </Link<Route>>

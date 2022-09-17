@@ -7,27 +7,27 @@ use crate::routes::{Route};
 #[function_component(Home)]
 pub fn home_view() -> Html {
     let trips = vec![
-        RecentWidgetElement{
+        recent_widget::Element {
             name: "Trip 1".to_string(),
-            el_type: RecentWidgetElementType::Trip,
+            el_type: recent_widget::ElementType::Trip,
         },
-        RecentWidgetElement{
+        recent_widget::Element {
             name: "Trip 2".to_string(),
-            el_type: RecentWidgetElementType::Trip,
+            el_type: recent_widget::ElementType::Trip,
         },
-        RecentWidgetElement{
+        recent_widget::Element {
             name: "Trip 3".to_string(),
-            el_type: RecentWidgetElementType::Trip,
+            el_type: recent_widget::ElementType::Trip,
         },
     ];
     let templates = vec![
-        RecentWidgetElement{
+        recent_widget::Element {
             name: "Template 1".to_string(),
-            el_type: RecentWidgetElementType::Template,
+            el_type: recent_widget::ElementType::Template,
         },
-        RecentWidgetElement{
+        recent_widget::Element {
             name: "Template 2".to_string(),
-            el_type: RecentWidgetElementType::Template,
+            el_type: recent_widget::ElementType::Template,
         },
     ];
     html! {
