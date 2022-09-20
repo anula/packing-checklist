@@ -11,10 +11,12 @@ use crate::routes::{Route, switch};
 #[function_component(App)]
 fn app() -> Html {
     html! {
-        <BrowserRouter>
+        <UserContextProvider>
+          <BrowserRouter>
             <HeaderBar/>
             <Switch<Route> render={Switch::render(switch)} />
-        </BrowserRouter>
+          </BrowserRouter>
+        </UserContextProvider>
     }
 }
 
