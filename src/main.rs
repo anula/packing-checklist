@@ -2,6 +2,8 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 mod components;
+mod config;
+mod firebase;
 mod routes;
 mod types;
 
@@ -11,12 +13,14 @@ use crate::routes::{Route, switch};
 #[function_component(App)]
 fn app() -> Html {
     html! {
-        <UserContextProvider>
-          <BrowserRouter>
-            <HeaderBar/>
-            <Switch<Route> render={Switch::render(switch)} />
-          </BrowserRouter>
-        </UserContextProvider>
+        <ConfigProvider>
+          <UserContextProvider>
+            <BrowserRouter>
+              <HeaderBar/>
+              <Switch<Route> render={Switch::render(switch)} />
+            </BrowserRouter>
+          </UserContextProvider>
+        </ConfigProvider>
     }
 }
 

@@ -14,3 +14,6 @@ dist/
 
 # Firebase
 firebase/
+
+# Config. Not really secret but not worth sharing with the code either.
+.env
