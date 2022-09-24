@@ -12,6 +12,7 @@ use crate::routes::{Route, switch};
 
 #[function_component(App)]
 fn app() -> Html {
+    // TODO: replace ConfigProvider with FirebaseAuthProvider(?)
     html! {
         <ConfigProvider>
           <UserContextProvider>
