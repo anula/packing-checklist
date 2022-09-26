@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FirebaseAuthError {
     TokenExpired,
     UserDisabled,
@@ -10,6 +10,8 @@ pub enum FirebaseAuthError {
     TooManyAttemptsTryLater,
     EmailNotFound,
     InvalidPassword,
+    InvalidIdToken,
+    WeakPassword,
     ParseError(url::ParseError),
     NetworkError(String),
     FirebaseUnexpectedError(String),
@@ -39,6 +41,10 @@ impl std::fmt::Display for FirebaseAuthError {
                 "There is no user record corresponding to this email. They might have been deleted".to_string(),
             FirebaseAuthError::InvalidPassword =>
                 "The password is invalid or the user does not have a password".to_string(),
+            FirebaseAuthError::InvalidIdToken =>
+                "The user's credential is no longer valid. The user must sign in again.".to_string(),
+            FirebaseAuthError::WeakPassword =>
+                "The password must be 6 characters long or more.".to_string(),
             FirebaseAuthError::ParseError(error) =>
                 format!("There was an error parsing the URL: {}", error),
             FirebaseAuthError::NetworkError(msg) =>
@@ -60,12 +66,12 @@ impl From<url::ParseError> for FirebaseAuthError {
 
 impl From<serde_json::Error> for FirebaseAuthError {
     fn from(err: serde_json::Error) -> Self {
-        Self::FirebaseUnexpectedError(format!("{}", err))
+        Self::FirebaseUnexpectedError(format!("SerdeParseError({})", err))
     }
 }
 
 impl From<reqwest::Error> for FirebaseAuthError {
     fn from(err: reqwest::Error) -> Self {
-        Self::NetworkError(format!("{}", err))
+        Self::NetworkError(format!("ReqwestError({})", err))
     }
 }

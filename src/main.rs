@@ -10,6 +10,10 @@ mod types;
 use crate::components::*;
 use crate::routes::{Route, switch};
 
+#[cfg(test)]
+#[macro_use]
+extern crate galvanic_assert;
+
 #[function_component(App)]
 fn app() -> Html {
     // TODO: replace ConfigProvider with FirebaseAuthProvider(?)

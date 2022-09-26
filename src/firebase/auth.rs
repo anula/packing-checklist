@@ -9,6 +9,8 @@ use super::types::*;
 
 pub use super::auth_errors::FirebaseAuthError;
 
+pub type UserId = String;
+
 static IDENTITYTOOLKIT_URL_SUFFIX: &'static str = "identitytoolkit.googleapis.com/v1/";
 static SECURETOKEN_URL_SUFFIX: &'static str = "securetoken.googleapis.com/v1/";
 static DEFAULT_URL_BASE: &'static str = "https://";
@@ -72,7 +74,7 @@ impl FirebaseAuth {
                     FirebaseErrorMessage::InvalidGrantType |
                     FirebaseErrorMessage::MissingRefreshToken) =>
                     FirebaseAuthError::Internal(format!("{}", our_err)),
-                unexpected_err => 
+                unexpected_err =>
                     FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
             }
         }).await?;
@@ -99,7 +101,7 @@ impl FirebaseAuth {
                 FirebaseErrorMessage::EmailExists => FirebaseAuthError::EmailExists,
                 FirebaseErrorMessage::OperationNotAllowed => FirebaseAuthError::OperationNotAllowed,
                 FirebaseErrorMessage::TooManyAttemptsTryLater => FirebaseAuthError::TooManyAttemptsTryLater,
-                unexpected_err => 
+                unexpected_err =>
                     FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
             }
         }).await?;
@@ -110,7 +112,7 @@ impl FirebaseAuth {
 
     // Sign in with email / password
     // https://firebase.google.com/docs/reference/rest/auth#section-sign-in-email-password
-    pub async fn sign_in(&mut self, email: &str, password: &str) -> Result<()> {
+    pub async fn sign_in(&mut self, email: &str, password: &str) -> Result<UserId> {
         let url = Url::parse_with_params(
             &format!("{}{}", self.identitytoolkit_endpoint, "accounts:signInWithPassword"),
             &[("key", &self.api_key)]
@@ -126,13 +128,126 @@ impl FirebaseAuth {
                 FirebaseErrorMessage::EmailNotFound => FirebaseAuthError::EmailNotFound,
                 FirebaseErrorMessage::InvalidPassword => FirebaseAuthError::InvalidPassword,
                 FirebaseErrorMessage::UserDisabled => FirebaseAuthError::UserDisabled,
-                unexpected_err => 
+                unexpected_err =>
                     FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
             }
         }).await?;
         self.refresh_token = Some(response.refresh_token);
         self.id_token = Some(response.id_token);
+        Ok(response.local_id)
+    }
+
+    // Change email
+    // https://firebase.google.com/docs/reference/rest/auth#section-change-email
+    pub async fn change_email(&mut self, new_email: &str) -> Result<()> {
+        let url = Url::parse_with_params(
+            &format!("{}{}", self.identitytoolkit_endpoint, "accounts:update"),
+            &[("key", &self.api_key)]
+        )?;
+        let id_token = self.id_token.as_ref().ok_or(FirebaseAuthError::AuthDataMissing)?;
+        let request = self.client.post(url.as_str())
+            .json(&ChangeEmailRequest{
+                id_token: id_token.to_string(),
+                email: new_email.to_string(),
+                return_secure_token: true,
+            });
+        let response = make_request::<ChangeEmailResponse>(request, |err| {
+            match err.message {
+                FirebaseErrorMessage::EmailExists => FirebaseAuthError::EmailExists,
+                FirebaseErrorMessage::InvalidIdToken => FirebaseAuthError::InvalidIdToken,
+                unexpected_err =>
+                    FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
+            }
+        }).await?;
+        self.id_token = Some(response.id_token);
+        self.refresh_token = Some(response.refresh_token);
         Ok(())
+    }
+
+    // Change password
+    // https://firebase.google.com/docs/reference/rest/auth#section-change-password
+    pub async fn change_password(&mut self, new_password: &str) -> Result<()> {
+        let url = Url::parse_with_params(
+            &format!("{}{}", self.identitytoolkit_endpoint, "accounts:update"),
+            &[("key", &self.api_key)]
+        )?;
+        let id_token = self.id_token.as_ref().ok_or(FirebaseAuthError::AuthDataMissing)?;
+        let request = self.client.post(url.as_str())
+            .json(&ChangePasswordRequest{
+                id_token: id_token.to_string(),
+                password: new_password.to_string(),
+                return_secure_token: true,
+            });
+        let response = make_request::<ChangePasswordResponse>(request, |err| {
+            match err.message {
+                FirebaseErrorMessage::InvalidIdToken => FirebaseAuthError::InvalidIdToken,
+                FirebaseErrorMessage::WeakPassword => FirebaseAuthError::WeakPassword,
+                unexpected_err =>
+                    FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
+            }
+        }).await?;
+        self.id_token = Some(response.id_token);
+        self.refresh_token = Some(response.refresh_token);
+        Ok(())
+    }
+
+    // Partial "Update profile"
+    // https://firebase.google.com/docs/reference/rest/auth#section-update-profile
+    // Note: we implement only display_name here! This is not all that Firebase supports.
+    pub async fn change_display_name(&mut self, new_display_name: &str) -> Result<()> {
+        let url = Url::parse_with_params(
+            &format!("{}{}", self.identitytoolkit_endpoint, "accounts:update"),
+            &[("key", &self.api_key)]
+        )?;
+        let id_token = self.id_token.as_ref().ok_or(FirebaseAuthError::AuthDataMissing)?;
+        let request = self.client.post(url.as_str())
+            .json(&UpdateProfileRequest{
+                id_token: id_token.to_string(),
+                display_name: new_display_name.to_string(),
+                return_secure_token: true,
+            });
+        let response = make_request::<UpdateProfileResponse>(request, |err| {
+            match err.message {
+                FirebaseErrorMessage::InvalidIdToken => FirebaseAuthError::InvalidIdToken,
+                unexpected_err =>
+                    FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
+            }
+        }).await?;
+        if let Some(new_id_token) = response.id_token {
+            self.id_token = Some(new_id_token);
+        }
+        if let Some(new_refresh_token) = response.refresh_token {
+            self.refresh_token = Some(new_refresh_token);
+        }
+        Ok(())
+    }
+
+    // Partial "Get user data"
+    // https://firebase.google.com/docs/reference/rest/auth#section-get-account-info
+    // Note: we implement only display_name here! This is not all that Firebase supports.
+    pub async fn get_display_name(&mut self) -> Result<Option<String>> {
+        let url = Url::parse_with_params(
+            &format!("{}{}", self.identitytoolkit_endpoint, "accounts:lookup"),
+            &[("key", &self.api_key)]
+        )?;
+        let id_token = self.id_token.as_ref().ok_or(FirebaseAuthError::AuthDataMissing)?;
+        let request = self.client.post(url.as_str())
+            .json(&GetUserDataRequest{
+                id_token: id_token.to_string(),
+            });
+        let response = make_request::<GetUserDataResponse>(request, |err| {
+            match err.message {
+                FirebaseErrorMessage::InvalidIdToken => FirebaseAuthError::InvalidIdToken,
+                FirebaseErrorMessage::UserNotFound => FirebaseAuthError::UserNotFound,
+                unexpected_err =>
+                    FirebaseAuthError::FirebaseUnexpectedError(format!("{}", unexpected_err)),
+            }
+        }).await?;
+        if response.users.len() < 1 {
+            return Err(
+                FirebaseAuthError::FirebaseUnexpectedError(format!("No user data was returned.")));
+        }
+        Ok(response.users[0].display_name.clone())
     }
 }
 
@@ -191,6 +306,74 @@ struct SignInRequest {
 struct SignInResponse {
     id_token: String,
     refresh_token: String,
+    local_id: String,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChangeEmailRequest {
+    id_token: String,
+    email: String,
+    return_secure_token: bool,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ChangeEmailResponse {
+    email: String,
+    id_token: String,
+    refresh_token: String,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ChangePasswordRequest {
+    id_token: String,
+    password: String,
+    return_secure_token: bool,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ChangePasswordResponse {
+    email: String,
+    id_token: String,
+    refresh_token: String,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateProfileRequest {
+    id_token: String,
+    display_name: String,
+    return_secure_token: bool,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateProfileResponse {
+    id_token: Option<String>,
+    refresh_token: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GetUserDataRequest {
+    id_token: String,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UserDetailsResponse {
+    local_id: String,
+    email: String,
+    display_name: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GetUserDataResponse {
+    users: Vec<UserDetailsResponse>,
 }
 
 // === Request/Response types ===
@@ -205,13 +388,92 @@ mod firebase_auth_tests {
         assert_ok!(FirebaseAuth::new("api_key"));
     }
 
-    // TODO: write unit tests that don't require local emulator to be running
-    //#[test]
-    fn test_with_local_emulator() -> Result<()> {
+}
+
+#[cfg(test)]
+mod firebase_auth_local_emulator_tests {
+    // These tests work only with a local auth emulator running, on port 9099.
+    use super::*;
+    use k9::assert_ok;
+    use std::sync::Once;
+    use galvanic_assert::matchers::*;
+    use galvanic_assert::matchers::variant::*;
+
+    static GLOBAL_SETUP: Once = Once::new();
+
+    fn global_setup() {
+        GLOBAL_SETUP.call_once(|| {
+            clean_up_local_emulator();
+        });
+    }
+
+    fn clean_up_local_emulator() {
+        let project_id = "packing-checklist-3879";
+        assert_ok!(tokio_test::block_on(
+            reqwest::Client::new().delete(
+                &format!("http://localhost:9099/emulator/v1/projects/{}/accounts", project_id))
+            .send()
+        ));
+    }
+
+    #[test]
+    fn test_new_user_flow() {
+        global_setup();
         let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
         assert_ok!(tokio_test::block_on(auth.sign_up("user@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.sign_in("user@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.refresh_id_token()));
-        Ok(())
+    }
+
+    #[test]
+    fn test_display_name_change() {
+        global_setup();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+
+        assert_ok!(tokio_test::block_on(auth.sign_up("user1@example.com", "password")));
+        assert_ok!(tokio_test::block_on(auth.sign_in("user1@example.com", "password")));
+
+        assert_eq!(tokio_test::block_on(auth.get_display_name()).unwrap(), None);
+        assert_ok!(tokio_test::block_on(auth.change_display_name("new_name")));
+        assert_that!(
+            &tokio_test::block_on(auth.get_display_name()).unwrap(),
+            maybe_some(eq("new_name".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_password_change() {
+        global_setup();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+
+        assert_ok!(tokio_test::block_on(auth.sign_up("user2@example.com", "password")));
+        assert_ok!(tokio_test::block_on(auth.sign_in("user2@example.com", "password")));
+        assert_that!(
+            &tokio_test::block_on(auth.sign_in("user2@example.com", "wrong_password")),
+            maybe_err(eq(FirebaseAuthError::InvalidPassword))
+        );
+        assert_ok!(tokio_test::block_on(auth.change_password("new_password")));
+        assert_that!(
+            &tokio_test::block_on(auth.sign_in("user2@example.com", "password")),
+            maybe_err(eq(FirebaseAuthError::InvalidPassword))
+        );
+        assert_ok!(tokio_test::block_on(auth.sign_in("user2@example.com", "new_password")));
+    }
+
+    #[test]
+    fn test_email_change() {
+        global_setup();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+
+        assert_ok!(tokio_test::block_on(auth.sign_up("user3@example.com", "password3")));
+        assert_ok!(tokio_test::block_on(auth.sign_in("user3@example.com", "password3")));
+
+        assert_ok!(tokio_test::block_on(auth.change_email("new_email@new_email.com")));
+
+        assert_that!(
+            &tokio_test::block_on(auth.sign_in("user3@example.com", "password3")),
+            maybe_err(eq(FirebaseAuthError::EmailNotFound))
+        );
+        assert_ok!(tokio_test::block_on(auth.sign_in("new_email@new_email.com", "password3")));
     }
 }
