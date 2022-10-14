@@ -394,6 +394,7 @@ mod firebase_auth_tests {
 mod firebase_auth_local_emulator_tests {
     // These tests work only with a local auth emulator running, on port 9099.
     use super::*;
+    use crate::config::parse_from_embedded_file;
     use k9::assert_ok;
     use std::sync::Once;
     use galvanic_assert::matchers::*;
@@ -407,11 +408,17 @@ mod firebase_auth_local_emulator_tests {
         });
     }
 
+    fn get_host_from_config() -> String {
+        let config = parse_from_embedded_file().unwrap();
+        config.auth_host
+    }
+
     fn clean_up_local_emulator() {
         let project_id = "packing-checklist-3879";
+        let host = get_host_from_config();
         assert_ok!(tokio_test::block_on(
             reqwest::Client::new().delete(
-                &format!("http://localhost:9099/emulator/v1/projects/{}/accounts", project_id))
+                &format!("{}emulator/v1/projects/{}/accounts", host, project_id))
             .send()
         ));
     }
@@ -419,7 +426,7 @@ mod firebase_auth_local_emulator_tests {
     #[test]
     fn test_new_user_flow() {
         global_setup();
-        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", &get_host_from_config()).unwrap();
         assert_ok!(tokio_test::block_on(auth.sign_up("user@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.sign_in("user@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.refresh_id_token()));
@@ -428,7 +435,7 @@ mod firebase_auth_local_emulator_tests {
     #[test]
     fn test_display_name_change() {
         global_setup();
-        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", &get_host_from_config()).unwrap();
 
         assert_ok!(tokio_test::block_on(auth.sign_up("user1@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.sign_in("user1@example.com", "password")));
@@ -444,7 +451,7 @@ mod firebase_auth_local_emulator_tests {
     #[test]
     fn test_password_change() {
         global_setup();
-        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", &get_host_from_config()).unwrap();
 
         assert_ok!(tokio_test::block_on(auth.sign_up("user2@example.com", "password")));
         assert_ok!(tokio_test::block_on(auth.sign_in("user2@example.com", "password")));
@@ -463,7 +470,7 @@ mod firebase_auth_local_emulator_tests {
     #[test]
     fn test_email_change() {
         global_setup();
-        let mut auth = FirebaseAuth::new_custom_url_base("api_key", "http://localhost:9099/").unwrap();
+        let mut auth = FirebaseAuth::new_custom_url_base("api_key", &get_host_from_config()).unwrap();
 
         assert_ok!(tokio_test::block_on(auth.sign_up("user3@example.com", "password3")));
         assert_ok!(tokio_test::block_on(auth.sign_in("user3@example.com", "password3")));

@@ -14,6 +14,10 @@ dist/
 
 # Firebase
 /firebase/
+database-debug.log
+firebase_error
+firebase_output
+ui-debug.log
 
 # Config. Not really secret but not worth sharing with the code either.
 .env

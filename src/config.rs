@@ -2,7 +2,7 @@ use serde::{Deserialize};
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
-    pub host: String,
+    pub auth_host: String,
 }
 
 #[derive(Debug, Clone)]
@@ -10,7 +10,7 @@ pub struct NoConfigError;
 
 macro_rules! ENV_FILE_PATH { () => { concat!(env!("CARGO_MANIFEST_DIR"), "/.env") } }
 
-fn parse_from_embedded_file() -> serde_json::Result<Config> {
+pub fn parse_from_embedded_file() -> serde_json::Result<Config> {
     let embedded_config = include_str!(ENV_FILE_PATH!());
     serde_json::from_str::<Config>(embedded_config)
 
